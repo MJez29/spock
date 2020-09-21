@@ -14,7 +14,7 @@ setup(
     url="https://github.com/MJez29/spock",
     packages=find_packages(),
     install_requires=[
-        'Click'
+        'Click', 'tekore', 'keyring', 'fuzzywuzzy[speedup]'
     ],
     entry_points={
         'console_scripts': [
