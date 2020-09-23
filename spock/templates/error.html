@@ -1,0 +1,76 @@
+<html>
+  <head>
+    <title>Spock</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Nunito&display=swap");
+
+      /* Color palette from https://coolors.co/280301-a85e59-b38481-a86560-eb6157 */
+
+      * {
+        font-family: "Nunito", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #eb6157;
+      }
+
+      #container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+      }
+
+      #text {
+        text-align: center;
+        width: 600px;
+        max-width: 80%;
+        padding-bottom: 50px;
+        color: #280301;
+      }
+
+      #text h1 {
+        margin-bottom: 20px;
+        font-size: 72px;
+        letter-spacing: 10px;
+        border-bottom: 1px solid;
+        border-bottom: 1px solid #280301;
+        text-transform: uppercase;
+      }
+
+      #text p {
+        font-size: 16px;
+        letter-spacing: 2px;
+        margin: 16px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="text">
+        <h1>Error!</h1>
+        <p id="error-message">Something went wrong :(</p>
+      </div>
+    </div>
+    <script>
+      const errorCode = "<error_code>";
+
+      const errorMessageElement = document.getElementById("error-message");
+
+      const errorMessages = {
+        access_denied:
+          "Spock was denied access to your Spotify account. Make sure to click 'Agree' on the authorization page.",
+        state_mismatch:
+          "This authorization was not initiated by Spock and has been aborted.",
+        missing_arguments:
+          "Some data is missing, did Spotify redirect you here?",
+        invalid_path: "You shouldn't be here.",
+      };
+
+      errorMessageElement.innerText =
+        errorMessages[errorCode] || "An unknown error occured.";
+    </script>
+  </body>
+</html>
