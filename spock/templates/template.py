@@ -1,4 +1,4 @@
-from importlib import resources as pkg_resources
+import importlib_resources as pkg_resources
 from spock import templates
 
 authorizedHtml = None
