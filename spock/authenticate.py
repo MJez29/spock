@@ -204,9 +204,11 @@ def authenticate() -> AccessToken:
 
     auth_server.wait_for_start()
 
-    webbrowser.open(
-        url=generate_spotify_authorize_url(code_challenge=code_challenge, state=state)
-    )
+    url = generate_spotify_authorize_url(code_challenge=code_challenge, state=state)
+
+    print(f"Please visit {url} in a browser where you are logged in to Spotify.")
+
+    webbrowser.open(url=url)
 
     auth_server.wait_for_stop()
 

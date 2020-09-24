@@ -13,6 +13,6 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/MJez29/spock",
     packages=find_packages(),
-    install_requires=["Click", "tekore", "keyring", "fuzzywuzzy[speedup]"],
+    install_requires=["Click", "tekore", "keyring", "fuzzywuzzy[speedup]", "requests"],
     entry_points={"console_scripts": ["spock=spock.cli:spock"]},
 )
