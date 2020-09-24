@@ -2,3 +2,5 @@ click
 keyring
 tekore
 fuzzywuzzy[speedup]
+requests
+importlib-resources

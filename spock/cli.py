@@ -1,6 +1,7 @@
 import click
 import tekore as tk
 from spock.state import State
+from spock.authenticate import authenticate
 from functools import wraps
 from fuzzywuzzy import fuzz
 import itertools
@@ -45,6 +46,9 @@ def get_track_info_string(result):
         return ret
     elif result.type == "artist":
         return f"{result.type} '{result.name}'"
+
+
+from spock.authenticate import authenticate
 
 
 @click.group()
@@ -215,6 +219,11 @@ def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=Fa
     else:
         user.playback_start_context(best_result.uri)
     print(f"Now playing {get_track_info_string(best_result)}")
+
+
+@spock.command()
+def auth():
+    authenticate()
 
 
 if __name__ == "__main__":
