@@ -166,6 +166,7 @@ def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=Fa
     query = " ".join(name)
     if not query:
         print("No query")
+        return
 
     if a:
         types = ("artist",)
