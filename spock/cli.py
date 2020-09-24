@@ -33,7 +33,7 @@ def spotify_invoker(func):
     return invoke
 
 
-def track_verbose(result):
+def get_track_info_string(result):
     if result.type == "track":
         return f"{result.type} '{result.name}' from '{result.album.name}' by '{', '.join(map(lambda x: x.name, result.artists))}'"
     if result.type == "album":
@@ -58,28 +58,28 @@ def spock(ctx):
 @spotify_invoker
 def resume(state, user):
     user.playback_resume()
-    print(f"Resuming {track_verbose(user.playback().item)}")
+    print(f"Resuming {get_track_info_string(user.playback().item)}")
 
 
 @spock.command()
 @spotify_invoker
 def pause(state, user):
     user.playback_pause()
-    print(f"Pausing {track_verbose(user.playback().item)}")
+    print(f"Pausing {get_track_info_string(user.playback().item)}")
 
 
 @spock.command()
 @spotify_invoker
 def next(state, user):
     user.playback_next()
-    print(f"Going to next {track_verbose(user.playback().item)}")
+    print(f"Going to next {get_track_info_string(user.playback().item)}")
 
 
 @spock.command()
 @spotify_invoker
 def prev(state, user):
     user.playback_previous()
-    print(f"Going to previous {track_verbose(user.playback().item)}")
+    print(f"Going to previous {get_track_info_string(user.playback().item)}")
 
 
 @spock.command()
@@ -214,7 +214,7 @@ def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=Fa
         user.playback_start_tracks([best_result.id])
     else:
         user.playback_start_context(best_result.uri)
-    print(f"Now playing {track_verbose(best_result)}")
+    print(f"Now playing {get_track_info_string(best_result)}")
 
 
 if __name__ == "__main__":
