@@ -2,12 +2,12 @@ import os
 import tekore as tk
 import keyring
 
-KEYRING_SERVICE_NAME = 'spock'
+KEYRING_SERVICE_NAME = "spock"
 
 
 class State:
     def __init__(self, default_client_id):
-        self.client_id = os.environ.get('SPOTIFY_CLIENT_ID', default_client_id)
+        self.client_id = os.environ.get("SPOTIFY_CLIENT_ID", default_client_id)
 
     def get_user(self):
         """
@@ -31,10 +31,10 @@ class State:
         """
         # Get refresh token from keyring or environment variable (for testing)
         kr_refresh_token = keyring.get_password(KEYRING_SERVICE_NAME, "refresh_token")
-        return os.environ.get('SPOTIFY_REFRESH_TOKEN', kr_refresh_token)
+        return os.environ.get("SPOTIFY_REFRESH_TOKEN", kr_refresh_token)
 
     def set_refresh_token(self, refresh_token):
         keyring.set_password(KEYRING_SERVICE_NAME, "refresh_token", refresh_token)
 
     def remove_refresh_token(self):
-        keyring.delete_password(KEYRING_SERVICE_NAME, 'refresh_token')
+        keyring.delete_password(KEYRING_SERVICE_NAME, "refresh_token")

@@ -11,6 +11,9 @@ Obtain a PKCE refresh token for debugging purposes
 import tekore as tk
 import os
 
-client_id = os.environ.get('SPOTIFY_CLIENT_ID')
-print(tk.prompt_for_pkce_token(client_id, "http://localhost", tk.scope.every).refresh_token)
-
+client_id = os.environ.get("SPOTIFY_CLIENT_ID")
+print(
+    tk.prompt_for_pkce_token(
+        client_id, "http://localhost", tk.scope.every
+    ).refresh_token
+)
