@@ -33,6 +33,20 @@ def spotify_invoker(func):
     return invoke
 
 
+def track_verbose(result):
+    if result.type == "track":
+        return f"{result.type} '{result.name}' from '{result.album.name}' by '{', '.join(map(lambda x: x.name, result.artists))}'"
+    if result.type == "album":
+        return f"{result.type} '{result.name}' by '{', '.join(map(lambda x: x.name, result.artists))}'"
+    elif result.type == "playlist":
+        ret = f"{result.type} '{result.name}' by {result.owner.display_name}"
+        if result.description:
+            ret += f': "{result.description}"'
+        return ret
+    elif result.type == "artist":
+        return f"{result.type} '{result.name}'"
+
+
 @click.group()
 @click.pass_context
 def spock(ctx):
@@ -44,28 +58,28 @@ def spock(ctx):
 @spotify_invoker
 def resume(state, user):
     user.playback_resume()
-    print("Resuming")
+    print(f"Resuming {track_verbose(user.playback().item)}")
 
 
 @spock.command()
 @spotify_invoker
 def pause(state, user):
     user.playback_pause()
-    print("Pausing")
+    print(f"Pausing {track_verbose(user.playback().item)}")
 
 
 @spock.command()
 @spotify_invoker
 def next(state, user):
     user.playback_next()
-    print("Going to next")
+    print(f"Going to next {track_verbose(user.playback().item)}")
 
 
 @spock.command()
 @spotify_invoker
 def prev(state, user):
     user.playback_previous()
-    print("Going to previous")
+    print(f"Going to previous {track_verbose(user.playback().item)}")
 
 
 @spock.command()
@@ -150,10 +164,10 @@ def device(state, user, devname):
 @spotify_invoker
 def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=False):
     query = " ".join(name)
-    if l:
-        # TODO library search support (pain)
-        types = ("track",)
-    elif a:
+    if not query:
+        print("No query")
+
+    if a:
         types = ("artist",)
     elif b:
         types = ("album",)
@@ -162,37 +176,44 @@ def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=Fa
     elif p:
         types = ("playlist",)
     else:
-        types = ("track", "album", "playlist", "artist")
+        types = ("playlist", "artist", "album", "track")
 
-    # flatten results across different categories into list
-    results = list(
-        itertools.chain(*[list(x.items) for x in user.search(query, types, limit=1)])
-    )
-    if not results:
-        print(f"No results found for query {query}")
-        return
+    # source from user library
+    if l:
+        results = []
+        if "playlist" in types:
+            results.extend(user.all_items(user.playlists(user.current_user().id)))
+        if "album" in types:
+            results.extend([x.album for x in user.all_items(user.saved_albums())])
+        if "track" in types:
+            results.extend([x.track for x in user.all_items(user.saved_tracks())])
+    # source from global search
+    else:
+        # flatten results across different categories into list
+        results = list(
+            itertools.chain(
+                *[list(x.items) for x in user.search(query, types, limit=1)]
+            )
+        )
 
     # find best match irrespective of category by name
-    scorer = lambda x: fuzz.partial_ratio(query, x.name)
-    best_result = max(results, key=scorer)
+    scorer = (
+        lambda x: 0
+        if x is None
+        else fuzz.ratio(query.lower(), ascii(x.name).lower())
+        + (x.popularity / 10 if x.type == "track" or x.type == "artist" else 0)
+    )
+    best_result = max(results, key=scorer, default=None)
+    score = scorer(best_result)
+    if score < 50:
+        print(f"No results found for query '{query}''")
+        return
+
     if best_result.type == "track":
         user.playback_start_tracks([best_result.id])
     else:
         user.playback_start_context(best_result.uri)
-    if best_result.type == "track":
-        print(
-            f"Playing {best_result.type} '{best_result.name}' from '{best_result.album.name}' by '{', '.join(map(lambda x: x.name, best_result.artists))}'"
-        )
-    if best_result.type == "album":
-        print(
-            f"Playing {best_result.type} '{best_result.name}' by '{', '.join(map(lambda x: x.name, best_result.artists))}'"
-        )
-    elif best_result.type == "playlist":
-        print(
-            f"Playing {best_result.type} '{best_result.name}' by {best_result.owner.display_name}: '{best_result.description}'"
-        )
-    elif best_result.type == "artist":
-        print(f"Playing {best_result.type} '{best_result.name}'")
+    print(f"Now playing {track_verbose(best_result)}")
 
 
 if __name__ == "__main__":
