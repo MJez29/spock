@@ -15,6 +15,8 @@ def spotify_invoker(func):
     :param func: Function accepting state
     :return: Wrapped function accepting state and user
     """
+
+    @click.pass_obj
     @wraps(func)
     def invoke(*args, **kwargs):
         try:
@@ -22,7 +24,7 @@ def spotify_invoker(func):
             if user is None:
                 print("Authentication is needed, run spock auth")
                 return
-            kwargs['user'] = user
+            kwargs["user"] = user
             return func(*args, **kwargs)
         except (tk.Forbidden, tk.NotFound) as e:
             # TODO better error messages
@@ -39,7 +41,6 @@ def spock(ctx):
 
 
 @spock.command()
-@click.pass_obj
 @spotify_invoker
 def resume(state, user):
     user.playback_resume()
@@ -47,7 +48,6 @@ def resume(state, user):
 
 
 @spock.command()
-@click.pass_obj
 @spotify_invoker
 def pause(state, user):
     user.playback_pause()
@@ -55,65 +55,76 @@ def pause(state, user):
 
 
 @spock.command()
-@click.pass_obj
 @spotify_invoker
 def next(state, user):
     user.playback_next()
-    print('Going to next')
+    print("Going to next")
 
 
 @spock.command()
-@click.pass_obj
 @spotify_invoker
 def prev(state, user):
     user.playback_previous()
-    print('Going to previous')
+    print("Going to previous")
 
 
 @spock.command()
-@click.pass_obj
-@click.argument('level', type=click.IntRange(0, 100))
+@click.argument("level", type=click.IntRange(0, 100))
 @spotify_invoker
 def volume(state, user, level):
     user.playback_volume(level)
-    print(f'Setting volume to {level}')
+    print(f"Setting volume to {level}")
 
 
 @spock.command()
-@click.argument('shuffle_state', required=True, type=click.BOOL)
-@click.pass_obj
+@click.argument("shuffle_state", required=False, type=click.BOOL)
 @spotify_invoker
 def shuffle(state, user, shuffle_state):
+    if shuffle_state is None:
+        shuffle_state = False  # set a default so we don't 400 when no device active
+        context = user.playback()
+        if context is not None:
+            shuffle_state = not context.shuffle_state
+
     user.playback_shuffle(shuffle_state)
-    # TODO remember state for toggle
     if shuffle_state:
-        print('Shuffle on')
+        print("Shuffle on")
     else:
-        print('Shuffle off')
+        print("Shuffle off")
+
+
+REPEAT_STATES = ["track", "context", "off"]
 
 
 @spock.command()
-@click.argument('repeat_state', required=True, type=click.Choice(['track', 'context', 'off']))
-@click.pass_obj
+@click.argument("repeat_state", required=False, type=click.Choice(REPEAT_STATES))
 @spotify_invoker
 def repeat(state, user, repeat_state):
+    if repeat_state is None:
+        repeat_state = "off"  # set a default so we don't 400 when no device active
+        context = user.playback()
+        if context is not None:
+            current_repeat_state = context.repeat_state
+            repeat_state = REPEAT_STATES[
+                (REPEAT_STATES.index(current_repeat_state) + 1) % len(REPEAT_STATES)
+            ]
     user.playback_repeat(repeat_state)
-    # TODO remember state for cycle
-    print(f'Setting repeat to {repeat_state}')
+    print(f"Setting repeat to {repeat_state}")
 
 
 @spock.command()
-@click.pass_obj
 @spotify_invoker
 def devices(state, user):
     device_list = user.playback_devices()
-    for dev in device_list:
-        print(dev)
+    if device_list:
+        for dev in device_list:
+            print(f"{'*' if dev.is_active else ''}{dev.name} on {dev.type}")
+    else:
+        print("No devices found")
 
 
 @spock.command()
-@click.argument('devname', type=click.STRING)
-@click.pass_obj
+@click.argument("devname", type=click.STRING)
 @spotify_invoker
 def device(state, user, devname):
     device_list = user.playback_devices()
@@ -124,51 +135,65 @@ def device(state, user, devname):
     score = scorer(best_device)
     if best_device and score > 50:
         user.playback_transfer(best_device.id, force_play=True)
-        print(f'Switching to device {best_device.name}')
+        print(f"Switching to device {best_device.name} on {best_device.type}")
     else:
-        print(f'No device found for query {devname}')
+        print(f"No device found for query '{devname}''")
 
 
 @spock.command()
-@click.option('-l')
-@click.option('-a')
-@click.option('-b')
-@click.option('-t')
-@click.option('-p')
-@click.argument('name', type=click.STRING)
-@click.pass_obj
+@click.option("-l", is_flag=True)
+@click.option("-a", is_flag=True)
+@click.option("-b", is_flag=True)
+@click.option("-t", is_flag=True)
+@click.option("-p", is_flag=True)
+@click.argument("name", nargs=-1)
 @spotify_invoker
 def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=False):
+    query = " ".join(name)
     if l:
         # TODO library search support (pain)
-        types = ('track',)
+        types = ("track",)
     elif a:
-        types = ('artist',)
+        types = ("artist",)
     elif b:
-        types = ('album',)
+        types = ("album",)
     elif t:
-        types = ('track',)
+        types = ("track",)
     elif p:
-        types = ('playlist',)
+        types = ("playlist",)
     else:
-        types = ('track', 'album', 'playlist', 'artist')
+        types = ("track", "album", "playlist", "artist")
 
     # flatten results across different categories into list
-    results = list(itertools.chain(*[list(x.items) for x in user.search(name, types, limit=1)]))
+    results = list(
+        itertools.chain(*[list(x.items) for x in user.search(query, types, limit=1)])
+    )
     if not results:
-        print(f'No results found for query {name}')
+        print(f"No results found for query {query}")
         return
 
     # find best match irrespective of category by name
-    scorer = lambda x: fuzz.partial_ratio(name, x.name)
+    scorer = lambda x: fuzz.partial_ratio(query, x.name)
     best_result = max(results, key=scorer)
-    if isinstance(best_result, tk.model.FullTrack):
+    if best_result.type == "track":
         user.playback_start_tracks([best_result.id])
     else:
         user.playback_start_context(best_result.uri)
+    if best_result.type == "track":
+        print(
+            f"Playing {best_result.type} '{best_result.name}' from '{best_result.album.name}' by '{', '.join(map(lambda x: x.name, best_result.artists))}'"
+        )
+    if best_result.type == "album":
+        print(
+            f"Playing {best_result.type} '{best_result.name}' by '{', '.join(map(lambda x: x.name, best_result.artists))}'"
+        )
+    elif best_result.type == "playlist":
+        print(
+            f"Playing {best_result.type} '{best_result.name}' by {best_result.owner.display_name}: '{best_result.description}'"
+        )
+    elif best_result.type == "artist":
+        print(f"Playing {best_result.type} '{best_result.name}'")
 
-    print(f'Playing {best_result.name}')
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     spock()
