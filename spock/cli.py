@@ -2,24 +2,11 @@ import click
 import tekore as tk
 from spock.state import State
 from spock.authenticate import authenticate
-from spock.interface import Spock
+from spock.interface import Spock, get_track_info_string
 from functools import wraps
 from fuzzywuzzy import fuzz
 import itertools
 from spock.config import CLIENT_ID
-
-def get_track_info_string(result):
-    if result.type == "track":
-        return f"{result.type} '{result.name}' from '{result.album.name}' by '{', '.join(map(lambda x: x.name, result.artists))}'"
-    if result.type == "album":
-        return f"{result.type} '{result.name}' by '{', '.join(map(lambda x: x.name, result.artists))}'"
-    elif result.type == "playlist":
-        ret = f"{result.type} '{result.name}' by {result.owner.display_name}"
-        if result.description:
-            ret += f': "{result.description}"'
-        return ret
-    elif result.type == "artist":
-        return f"{result.type} '{result.name}'"
 
 
 @click.group()
@@ -127,9 +114,13 @@ def device(spock_interface, devname):
 @click.option("-p", "--playlist", is_flag=True)
 @click.argument("name", nargs=-1)
 @click.pass_obj
-def play(spock_interface, name, l=False, a=False, b=False, t=False, p=False):
+def play(spock_interface, name,
+        library=False, artist=False,
+        album=False, track=False, playlist=False):
     query = ' '.join(name)
-    res = spock_interface.play(query, use_library=l, artist=a, album=b, track=t, playlist=p)
+    res = spock_interface.play(query,
+            use_library=library, artist=artist,
+            album=album, track=track, playlist=playlist)
     if res:
         print(f"Now playing {get_track_info_string(res)}")
     else:

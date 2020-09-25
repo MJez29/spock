@@ -8,6 +8,19 @@ from fuzzywuzzy import fuzz
 import itertools
 from spock.config import CLIENT_ID
 
+def get_track_info_string(result):
+    if result.type == "track":
+        return f"{result.type} '{result.name}' from '{result.album.name}' by '{', '.join(map(lambda x: x.name, result.artists))}'"
+    if result.type == "album":
+        return f"{result.type} '{result.name}' by '{', '.join(map(lambda x: x.name, result.artists))}'"
+    elif result.type == "playlist":
+        ret = f"{result.type} '{result.name}' by {result.owner.display_name}"
+        if result.description:
+            ret += f': "{result.description}"'
+        return ret
+    elif result.type == "artist":
+        return f"{result.type} '{result.name}'"
+
 class Spock:
 
     def __init__(self, default_client_id=CLIENT_ID):
