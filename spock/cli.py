@@ -127,9 +127,24 @@ def device(spock_interface, devname):
 @click.option("-p", "--playlist", is_flag=True)
 @click.argument("name", nargs=-1)
 @click.pass_obj
-def play(spock_interface, name, l=False, a=False, b=False, t=False, p=False):
-    query = ' '.join(name)
-    res = spock_interface.play(query, use_library=l, artist=a, album=b, track=t, playlist=p)
+def play(
+    spock_interface,
+    name,
+    library=False,
+    artist=False,
+    album=False,
+    track=False,
+    playlist=False,
+):
+    query = " ".join(name)
+    res = spock_interface.play(
+        query,
+        use_library=library,
+        artist=artist,
+        album=album,
+        track=track,
+        playlist=playlist,
+    )
     if res:
         print(f"Now playing {get_track_info_string(res)}")
     else:
