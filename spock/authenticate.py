@@ -4,7 +4,7 @@ import base64
 import webbrowser
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
 import requests
 
 from spock.config import CLIENT_ID, REDIRECT_URI, PORT
@@ -16,6 +16,15 @@ CODE_VERIFIER_MAX_LENGTH = 128
 CODE_VERIFIER_CHARACTERS = (
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_.~"
 )
+SCOPE = [
+    'streaming',
+    'user-read-playback-state',
+    'user-modify-playback-state',
+    'user-read-currently-playing',
+    'playlist-read-collaborative',
+    'playlist-read-private',
+    'user-library-read',
+]
 
 
 def generate_code() -> (str, str):
@@ -57,14 +66,11 @@ def generate_spotify_authorize_url(code_challenge, state):
     """
     Returns the Spotify URL to begin the authorization process for a user.
     """
-    return "https://accounts.spotify.com/authorize?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}&state={state}&code_challenge={code_challenge}&code_challenge_method=S256".format(
-        code_challenge=code_challenge,
-        client_id=CLIENT_ID,
-        redirect_uri=REDIRECT_URI,
-        scope="streaming",
-        state=state,
-    )
-
+    return f'https://accounts.spotify.com/authorize' \
+           f'?response_type=code&client_id={CLIENT_ID}' \
+           f'&redirect_uri={REDIRECT_URI}&scope={quote(" ".join(SCOPE))}' \
+           f'&state={state}&code_challenge={code_challenge}' \
+           f'&code_challenge_method=S256'
 
 def merge_kwargs(kwargs1, kwargs2):
     kwargs1.update(kwargs2)

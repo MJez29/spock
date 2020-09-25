@@ -5,9 +5,9 @@ from spock.authenticate import authenticate
 from functools import wraps
 from fuzzywuzzy import fuzz
 import itertools
+from spock.config import CLIENT_ID
 
-# TODO change me to the actual client ID when auth is done
-SPOCK_CLIENT_ID = None
+SPOCK_CLIENT_ID = CLIENT_ID
 
 
 def spotify_invoker(func):
@@ -46,9 +46,6 @@ def get_track_info_string(result):
         return ret
     elif result.type == "artist":
         return f"{result.type} '{result.name}'"
-
-
-from spock.authenticate import authenticate
 
 
 @click.group()
@@ -197,7 +194,7 @@ def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=Fa
         # flatten results across different categories into list
         results = list(
             itertools.chain(
-                *[list(x.items) for x in user.search(query, types, limit=1)]
+                *[list(x.items) for x in user.search(query, types, limit=5)]
             )
         )
 
@@ -206,7 +203,7 @@ def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=Fa
         lambda x: 0
         if x is None
         else fuzz.ratio(query.lower(), ascii(x.name).lower())
-        + (x.popularity / 10 if x.type == "track" or x.type == "artist" else 0)
+        + (x.popularity if x.type in ["track", "artist"] else 0)
     )
     best_result = max(results, key=scorer, default=None)
     score = scorer(best_result)
@@ -222,8 +219,10 @@ def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=Fa
 
 
 @spock.command()
-def auth():
-    authenticate()
+@click.pass_obj
+def auth(state):
+    token = authenticate()
+    state.set_refresh_token(token.refresh_token)
 
 
 if __name__ == "__main__":
