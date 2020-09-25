@@ -5,9 +5,9 @@ from spock.authenticate import authenticate
 from functools import wraps
 from fuzzywuzzy import fuzz
 import itertools
+from spock.config import CLIENT_ID
 
-# TODO change me to the actual client ID when auth is done
-SPOCK_CLIENT_ID = None
+SPOCK_CLIENT_ID = CLIENT_ID
 
 
 def spotify_invoker(func):
@@ -222,8 +222,10 @@ def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=Fa
 
 
 @spock.command()
-def auth():
-    authenticate()
+@click.pass_obj
+def auth(state):
+    token = authenticate()
+    state.set_refresh_token(token.refresh_token)
 
 
 if __name__ == "__main__":
