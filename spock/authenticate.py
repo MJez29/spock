@@ -4,7 +4,7 @@ import base64
 import webbrowser
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
 import requests
 
 from spock.config import CLIENT_ID, REDIRECT_URI, PORT
@@ -66,10 +66,9 @@ def generate_spotify_authorize_url(code_challenge, state):
     """
     Returns the Spotify URL to begin the authorization process for a user.
     """
-
     return f'https://accounts.spotify.com/authorize' \
            f'?response_type=code&client_id={CLIENT_ID}' \
-           f'&redirect_uri={REDIRECT_URI}&scope={"%20".join(SCOPE)}' \
+           f'&redirect_uri={REDIRECT_URI}&scope={quote(" ".join(SCOPE))}' \
            f'&state={state}&code_challenge={code_challenge}' \
            f'&code_challenge_method=S256'
 
