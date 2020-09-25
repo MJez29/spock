@@ -39,10 +39,13 @@ def resume(spock_interface):
 @spock.command()
 @click.pass_obj
 def pause(spock_interface):
-    if spock_interface.pause():
-        print(f"Pausing {get_track_info_string(playback.item)}")
-    else:
-        print(f"Resuming {get_track_info_string(playback.item)}")
+    res = spock_interface.pause()
+    if res:
+        action, playback = res
+        if action:
+            print(f"Pausing {get_track_info_string(playback.item)}")
+        else:
+            print(f"Resuming {get_track_info_string(playback.item)}")
 
 
 @spock.command()
@@ -117,19 +120,20 @@ def device(spock_interface, devname):
 
 
 @spock.command()
-@click.option("-l", is_flag=True)
-@click.option("-a", is_flag=True)
-@click.option("-b", is_flag=True)
-@click.option("-t", is_flag=True)
-@click.option("-p", is_flag=True)
+@click.option("-l", "--library", is_flag=True)
+@click.option("-a", "--artist", is_flag=True)
+@click.option("-b", "--album", is_flag=True)
+@click.option("-t", "--track", is_flag=True)
+@click.option("-p", "--playlist", is_flag=True)
 @click.argument("name", nargs=-1)
 @click.pass_obj
 def play(spock_interface, name, l=False, a=False, b=False, t=False, p=False):
-    res = spock_interface.play(name, l=l, a=a, b=b, t=t, p=p)
+    query = ' '.join(name)
+    res = spock_interface.play(query, use_library=l, artist=a, album=b, track=t, playlist=p)
     if res:
         print(f"Now playing {get_track_info_string(res)}")
     else:
-        print(f"No results found for query '{query}''")
+        print(f"No results found for query '{query}'")
 
 
 @spock.command()

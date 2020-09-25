@@ -1,6 +1,6 @@
 import click
 import tekore as tk
-from tekore.model import Device
+from tekore.model import Device, RepeatState
 from spock.state import State
 from spock.authenticate import authenticate
 from functools import wraps
@@ -12,7 +12,7 @@ class Spock:
 
     def __init__(self, default_client_id=CLIENT_ID):
         self.state = State(default_client_id)
-        self.user = self.state.get_user()
+        self.user = None
 
     def check_auth(func):
         """
@@ -44,10 +44,10 @@ class Spock:
         context = self.user.playback()
         if context is not None and context.is_playing:
             self.user.playback_pause()
-            return True
+            return True, self.user.playback()
         else:
             self.user.playback_resume()
-            return False
+            return False, self.user.playback()
 
     @check_auth
     def next(self):
@@ -62,7 +62,7 @@ class Spock:
     @check_auth
     def volume(self, level):
         if level < 0 or level > 100:
-            raise
+            raise ValueError('Level must be between 0 and 100 inclusive')
         self.user.playback_volume(level)
         return self.user.playback()
 
@@ -78,11 +78,11 @@ class Spock:
     @check_auth
     def repeat(self, repeat_state):
         if repeat_state is None:
-            repeat_state = 'off'
+            repeat_state = RepeatState.off
             context = self.user.playback()
             if context is not None:
-                if context.repeat_state == 'off':
-                    repeat_state = 'track'
+                if context.repeat_state == RepeatState.off:
+                    repeat_state = RepeatState.track
 
         self.user.playback_repeat(repeat_state)
         return self.user.playback()
@@ -112,24 +112,29 @@ class Spock:
         self.user.playback_transfer(best_device.id, force_play=True)
 
     @check_auth
-    def play(self, name, l=False, a=False, b=False, t=False, p=False):
-        query = " ".join(name)
+    def play(self, query, use_library=False,
+            artist=False, album=False,
+            track=False, playlist=False):
         if not query:
             return
+        if isinstance(query, list):
+            query = " ".join(name)
 
-        if a:
-            types = ("artist",)
-        elif b:
-            types = ("album",)
-        elif t:
-            types = ("track",)
-        elif p:
-            types = ("playlist",)
-        else:
-            types = ("playlist", "artist", "album", "track")
+        types = []
+        if artist:
+            types.append("artist")
+        if album:
+            types.append("album")
+        if track:
+            types.append("track")
+        if playlist:
+            types.append("playlist")
+
+        if not types:
+            types = ["playlist", "artist", "album", "track"]
 
         # source from user library
-        if l:
+        if use_library:
             results = []
             if "playlist" in types:
                 results.extend(self.user.all_items(self.user.playlists(self.user.current_user().id)))
