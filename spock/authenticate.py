@@ -61,7 +61,7 @@ def generate_spotify_authorize_url(code_challenge, state):
         code_challenge=code_challenge,
         client_id=CLIENT_ID,
         redirect_uri=REDIRECT_URI,
-        scope="streaming",
+        scope="user-read-playback-state user-modify-playback-state user-read-currently-playing streaming playlist-read-collaborative playlist-read-private user-library-read",
         state=state,
     )
 
