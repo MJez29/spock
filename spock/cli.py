@@ -48,9 +48,6 @@ def get_track_info_string(result):
         return f"{result.type} '{result.name}'"
 
 
-from spock.authenticate import authenticate
-
-
 @click.group()
 @click.pass_context
 def spock(ctx):
