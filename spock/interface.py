@@ -109,7 +109,7 @@ class Spock:
 
     @check_auth
     def use_device_by_id(self, dev_id):
-        self.user.playback_transfer(best_device.id, force_play=True)
+        self.user.playback_transfer(dev_id, force_play=True)
 
     @check_auth
     def play(self, query, use_library=False,
@@ -118,7 +118,7 @@ class Spock:
         if not query:
             return
         if isinstance(query, list):
-            query = " ".join(name)
+            query = " ".join(query)
 
         types = []
         if artist:
