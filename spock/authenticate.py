@@ -4,7 +4,7 @@ import base64
 import webbrowser
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
 import requests
 
 from spock.config import CLIENT_ID, REDIRECT_URI, PORT
@@ -61,7 +61,9 @@ def generate_spotify_authorize_url(code_challenge, state):
         code_challenge=code_challenge,
         client_id=CLIENT_ID,
         redirect_uri=REDIRECT_URI,
-        scope="user-read-playback-state user-modify-playback-state user-read-currently-playing streaming playlist-read-collaborative playlist-read-private user-library-read",
+        scope=quote(
+            "user-read-playback-state user-modify-playback-state user-read-currently-playing streaming playlist-read-collaborative playlist-read-private user-library-read"
+        ),
         state=state,
     )
 
