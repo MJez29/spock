@@ -8,8 +8,8 @@ from fuzzywuzzy import fuzz
 import itertools
 from spock.config import CLIENT_ID
 
-class Spock:
 
+class Spock:
     def __init__(self, default_client_id=CLIENT_ID):
         self.state = State(default_client_id)
         self.user = None
@@ -20,6 +20,7 @@ class Spock:
         :param func: Function using self.user
         :return: Wrapped function
         """
+
         @wraps(func)
         def invoke(self, *args, **kwargs):
             try:
@@ -62,7 +63,7 @@ class Spock:
     @check_auth
     def volume(self, level):
         if level < 0 or level > 100:
-            raise ValueError('Level must be between 0 and 100 inclusive')
+            raise ValueError("Level must be between 0 and 100 inclusive")
         self.user.playback_volume(level)
         return self.user.playback()
 
@@ -112,9 +113,15 @@ class Spock:
         self.user.playback_transfer(dev_id, force_play=True)
 
     @check_auth
-    def play(self, query, use_library=False,
-            artist=False, album=False,
-            track=False, playlist=False):
+    def play(
+        self,
+        query,
+        use_library=False,
+        artist=False,
+        album=False,
+        track=False,
+        playlist=False,
+    ):
         if not query:
             return
         if isinstance(query, list):
@@ -137,11 +144,19 @@ class Spock:
         if use_library:
             results = []
             if "playlist" in types:
-                results.extend(self.user.all_items(self.user.playlists(self.user.current_user().id)))
+                results.extend(
+                    self.user.all_items(
+                        self.user.playlists(self.user.current_user().id)
+                    )
+                )
             if "album" in types:
-                results.extend([x.album for x in self.user.all_items(self.user.saved_albums())])
+                results.extend(
+                    [x.album for x in self.user.all_items(self.user.saved_albums())]
+                )
             if "track" in types:
-                results.extend([x.track for x in self.user.all_items(self.user.saved_tracks())])
+                results.extend(
+                    [x.track for x in self.user.all_items(self.user.saved_tracks())]
+                )
         # source from global search
         else:
             # flatten results across different categories into list

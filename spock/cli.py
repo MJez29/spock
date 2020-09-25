@@ -8,6 +8,7 @@ from fuzzywuzzy import fuzz
 import itertools
 from spock.config import CLIENT_ID
 
+
 def get_track_info_string(result):
     if result.type == "track":
         return f"{result.type} '{result.name}' from '{result.album.name}' by '{', '.join(map(lambda x: x.name, result.artists))}'"
@@ -27,6 +28,7 @@ def get_track_info_string(result):
 def spock(ctx):
     spock_interface = Spock()
     ctx.obj = spock_interface
+
 
 @spock.command()
 @click.pass_obj
@@ -89,7 +91,9 @@ def shuffle(spock_interface, shuffle_state):
 
 
 @spock.command()
-@click.argument("repeat_state", required=False, type=click.Choice(['track', 'context', 'off']))
+@click.argument(
+    "repeat_state", required=False, type=click.Choice(["track", "context", "off"])
+)
 @click.pass_obj
 def repeat(spock_interface, repeat_state):
     playback = spock_interface.repeat(repeat_state)
@@ -155,6 +159,7 @@ def play(
 @click.pass_obj
 def auth(spock_interface):
     spock_interface.auth()
+
 
 if __name__ == "__main__":
     spock()
