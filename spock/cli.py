@@ -197,7 +197,7 @@ def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=Fa
         # flatten results across different categories into list
         results = list(
             itertools.chain(
-                *[list(x.items) for x in user.search(query, types, limit=1)]
+                *[list(x.items) for x in user.search(query, types, limit=5)]
             )
         )
 
@@ -206,7 +206,7 @@ def play(state, user: tk.Spotify, name, l=False, a=False, b=False, t=False, p=Fa
         lambda x: 0
         if x is None
         else fuzz.ratio(query.lower(), ascii(x.name).lower())
-        + (x.popularity / 10 if x.type == "track" or x.type == "artist" else 0)
+        + (x.popularity if x.type in ["track", "artist"] else 0)
     )
     best_result = max(results, key=scorer, default=None)
     score = scorer(best_result)
