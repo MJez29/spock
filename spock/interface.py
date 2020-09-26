@@ -2,11 +2,16 @@ import click
 import tekore as tk
 from tekore.model import Device, RepeatState
 from spock.state import State
-from spock.authenticate import authenticate
+from spock.authenticate import (
+    authenticate,
+    authenticate_with_key,
+    authenticate_for_remote,
+)
 from functools import wraps
 from fuzzywuzzy import fuzz
 import itertools
 from spock.config import CLIENT_ID
+
 
 def get_track_info_string(result):
     if result.type == "track":
@@ -20,6 +25,7 @@ def get_track_info_string(result):
         return ret
     elif result.type == "artist":
         return f"{result.type} '{result.name}'"
+
 
 class Spock:
     def __init__(self, default_client_id=CLIENT_ID):
@@ -197,6 +203,14 @@ class Spock:
 
         return best_result
 
-    def auth(self):
-        token = authenticate()
+    def auth(self, remote=False):
+
+        if not remote:
+            token = authenticate()
+            self.state.set_refresh_token(token.refresh_token)
+        else:
+            authenticate_for_remote()
+
+    def auth_with_key(self, key):
+        token = authenticate_with_key(key=key)
         self.state.set_refresh_token(token.refresh_token)

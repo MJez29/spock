@@ -45,6 +45,10 @@
         letter-spacing: 2px;
         margin: 16px 0;
       }
+
+      .hide {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -55,7 +59,31 @@
           Spock is now authorized to use your Spotify account! You can close
           this page and return to your terminal.
         </p>
+        <div id="remote" class="hide">
+          <input type="text" id="key" />
+          <button id="copy-key">Copy</button>
+        </div>
       </div>
     </div>
+
+    <script>
+      const key = "<key>";
+      const remote = "<remote>" == "true" ? true : false;
+
+      const remoteDiv = document.getElementById("remote");
+
+      if (remote) {
+        remoteDiv.classList.remove("hide");
+
+        const keyInput = document.getElementById("key");
+        keyInput.value = key;
+
+        const copyKeyButton = document.getElementById("copy-key");
+        copyKeyButton.addEventListener("click", () => {
+          keyInput.select();
+          document.execCommand("copy");
+        });
+      }
+    </script>
   </body>
 </html>

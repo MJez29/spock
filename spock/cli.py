@@ -8,6 +8,7 @@ from fuzzywuzzy import fuzz
 import itertools
 from spock.config import CLIENT_ID
 
+
 @click.group()
 @click.pass_context
 def spock(ctx):
@@ -141,9 +142,14 @@ def play(
 
 
 @spock.command()
+@click.option("-r", "--for-remote", is_flag=True)
+@click.option("-k", "--key")
 @click.pass_obj
-def auth(spock_interface):
-    spock_interface.auth()
+def auth(spock_interface, key, for_remote):
+    if key:
+        spock_interface.auth_with_key(key=key)
+    else:
+        spock_interface.auth(remote=for_remote)
 
 
 if __name__ == "__main__":
