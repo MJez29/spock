@@ -69,7 +69,7 @@ class Spock:
 
     @check_auth
     def prev(self):
-        self.user.playback_prev()
+        self.user.playback_previous()
         return self.user.playback()
 
     @check_auth
