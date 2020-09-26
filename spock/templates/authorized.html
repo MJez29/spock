@@ -55,12 +55,18 @@
     <div id="container">
       <div id="text">
         <h1>Success!</h1>
-        <p>
-          Spock is now authorized to use your Spotify account! You can close
-          this page and return to your terminal.
-        </p>
+        <div id="local" class="hide">
+          <p>
+            Spock is now authorized to use your Spotify account! You can close
+            this page and return to your terminal.
+          </p>
+        </div>
         <div id="remote" class="hide">
-          <input type="text" id="key" />
+          <p>
+            Copy the following key and run spock auth --key &lt;KEY&gt; on the
+            machine you would like to authenticate on.
+          </p>
+          <input type="text" id="key" readonly />
           <button id="copy-key">Copy</button>
         </div>
       </div>
@@ -71,9 +77,11 @@
       const remote = "<remote>" == "true" ? true : false;
 
       const remoteDiv = document.getElementById("remote");
+      const localDiv = document.getElementById("local");
 
       if (remote) {
         remoteDiv.classList.remove("hide");
+        localDiv.classList.add("hide");
 
         const keyInput = document.getElementById("key");
         keyInput.value = key;
@@ -83,6 +91,9 @@
           keyInput.select();
           document.execCommand("copy");
         });
+      } else {
+        remoteDiv.classList.add("hide");
+        localDiv.classList.remove("hide");
       }
     </script>
   </body>
