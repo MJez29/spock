@@ -52,22 +52,38 @@ def prev(spock_interface):
 
 
 @spock.command()
-@click.argument("level", type=click.IntRange(0, 100))
+@click.argument("level", type=click.STRING)
 @click.pass_obj
 def volume(spock_interface, level):
+    arg = None
+    final = None
+
     try:
-        spock_interface.volume(level)
-    except:
+        if level == 'up' or level == 'down':
+            if level == 'up':
+                final = spock_interface.volume_up()
+            elif level == 'down':
+                final = spock_interface.volume_down()
+        else:
+            try:
+                arg = int(level)
+            except:
+                raise click.BadParameter(level)
+
+            if arg < 0 or arg > 100:
+                raise click.BadParameter(level)
+            final = spock_interface.volume(arg)
+    except ValueError:
         print("Unable to set volume for this device")
         return
-    print(f"Setting volume to {level}")
+    print(f"Setting volume to {final}")
 
 
 @spock.command()
 @click.argument("shuffle_state", required=False, type=click.BOOL)
 @click.pass_obj
 def shuffle(spock_interface, shuffle_state):
-    playback = spock_interface.shuffle(state)
+    playback = spock_interface.shuffle(shuffle_state)
     if playback:
         if playback.shuffle_state:
             print("Shuffle on")
