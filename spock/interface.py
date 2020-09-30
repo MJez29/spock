@@ -1,6 +1,7 @@
 import click
 import tekore as tk
-from tekore.model import Device, RepeatState
+from tekore.model import Device, RepeatState, \
+        FullArtistOffsetPaging, SimpleAlbumPaging, SimplePlaylistPaging, FullTrackPaging
 from spock.state import State
 from spock.authenticate import authenticate
 from functools import wraps
@@ -73,16 +74,30 @@ class Spock:
         return self.user.playback()
 
     @check_auth
+    def volume_up(self):
+        context = self.user.playback()
+        new_level = min(100, context.device.volume_percent + 10)
+        self.user.playback_volume(new_level)
+        return new_level
+
+    @check_auth
+    def volume_down(self):
+        context = self.user.playback()
+        new_level = max(0, context.device.volume_percent - 10)
+        self.user.playback_volume(new_level)
+        return new_level
+
+    @check_auth
     def volume(self, level):
         if level < 0 or level > 100:
             raise ValueError("Level must be between 0 and 100 inclusive")
         self.user.playback_volume(level)
-        return self.user.playback()
+        return level
 
     @check_auth
     def shuffle(self, shuffle_state=None):
         if shuffle_state is None:
-            context = user.playback()
+            context = self.user.playback()
             if context is not None:
                 shuffle_state = not context.shuffle_state
         self.user.playback_shuffle(shuffle_state)
@@ -125,7 +140,7 @@ class Spock:
         self.user.playback_transfer(dev_id, force_play=True)
 
     @check_auth
-    def play(
+    def get_search_results(
         self,
         query,
         use_library=False,
@@ -133,9 +148,10 @@ class Spock:
         album=False,
         track=False,
         playlist=False,
+        limit=5
     ):
-        if not query:
-            return
+        if not query and not use_library:
+            return {}
         if isinstance(query, list):
             query = " ".join(query)
 
@@ -151,32 +167,54 @@ class Spock:
 
         if not types:
             types = ["playlist", "artist", "album", "track"]
-
+        results = {}
         # source from user library
         if use_library:
-            results = []
             if "playlist" in types:
-                results.extend(
-                    self.user.all_items(
-                        self.user.playlists(self.user.current_user().id)
-                    )
-                )
+                results['playlist'] = self.user.all_items(self.user.playlists(self.user.current_user().id))
+
             if "album" in types:
-                results.extend(
-                    [x.album for x in self.user.all_items(self.user.saved_albums())]
-                )
+                results['album'] = [x.album for x in self.user.all_items(self.user.saved_albums())]
+
             if "track" in types:
-                results.extend(
-                    [x.track for x in self.user.all_items(self.user.saved_tracks())]
-                )
+                results['track'] = [x.track for x in self.user.all_items(self.user.saved_tracks())]
+
         # source from global search
         else:
-            # flatten results across different categories into list
-            results = list(
-                itertools.chain(
-                    *[list(x.items) for x in self.user.search(query, types, limit=5)]
-                )
-            )
+            search = self.user.search(query, tuple(types), limit=limit)
+            for collection in search:
+                if isinstance(collection, FullArtistOffsetPaging):
+                    results['artist'] = collection.items
+                elif isinstance(collection, SimpleAlbumPaging):
+                    results['album'] = collection.items
+                elif isinstance(collection, SimplePlaylistPaging):
+                    results['playlist'] = collection.items
+                elif isinstance(collection, FullTrackPaging):
+                    results['track'] = collection.items
+        
+        return results
+
+    @check_auth
+    def play(
+        self,
+        query,
+        use_library=False,
+        artist=False,
+        album=False,
+        track=False,
+        playlist=False,
+    ):
+        search_res = self.get_search_results(
+                query,
+                use_library=use_library,
+                artist=artist,
+                album=album,
+                track=track,
+                playlist=playlist)
+
+        results = []
+        for t, items in search_res.items():
+            results.extend(items)
 
         # find best match irrespective of category by name
         scorer = (
@@ -196,6 +234,14 @@ class Spock:
             self.user.playback_start_context(best_result.uri)
 
         return best_result
+
+    @check_auth
+    def play_object(self, obj):
+        if obj.type == "track":
+            self.user.playback_start_tracks([obj.id])
+        else:
+            self.user.playback_start_context(obj.uri)
+        return obj
 
     def auth(self):
         token = authenticate()
