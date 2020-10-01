@@ -6,6 +6,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs, quote
 import requests
+import json
 
 from spock.config import CLIENT_ID, REDIRECT_URI, PORT
 from spock.templates.template import get_authorized_page, get_error_page
@@ -17,13 +18,13 @@ CODE_VERIFIER_CHARACTERS = (
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_.~"
 )
 SCOPE = [
-    'streaming',
-    'user-read-playback-state',
-    'user-modify-playback-state',
-    'user-read-currently-playing',
-    'playlist-read-collaborative',
-    'playlist-read-private',
-    'user-library-read',
+    "streaming",
+    "user-read-playback-state",
+    "user-modify-playback-state",
+    "user-read-currently-playing",
+    "playlist-read-collaborative",
+    "playlist-read-private",
+    "user-library-read",
 ]
 
 
@@ -66,11 +67,14 @@ def generate_spotify_authorize_url(code_challenge, state):
     """
     Returns the Spotify URL to begin the authorization process for a user.
     """
-    return f'https://accounts.spotify.com/authorize' \
-           f'?response_type=code&client_id={CLIENT_ID}' \
-           f'&redirect_uri={REDIRECT_URI}&scope={quote(" ".join(SCOPE))}' \
-           f'&state={state}&code_challenge={code_challenge}' \
-           f'&code_challenge_method=S256'
+    return (
+        f"https://accounts.spotify.com/authorize"
+        f"?response_type=code&client_id={CLIENT_ID}"
+        f'&redirect_uri={REDIRECT_URI}&scope={quote(" ".join(SCOPE))}'
+        f"&state={state}&code_challenge={code_challenge}"
+        f"&code_challenge_method=S256"
+    )
+
 
 def merge_kwargs(kwargs1, kwargs2):
     kwargs1.update(kwargs2)
@@ -83,9 +87,11 @@ class AuthorizationServer:
     has returned the code is accessible from authorization_code.
     """
 
-    def __init__(self, state):
+    def __init__(self, state, code_verifier, remote):
         self.server_started_event = threading.Event()
         self.state = state
+        self.code_verifier = code_verifier
+        self.remote = remote
 
         self.authorization_code = None
         self.authorization_attempted_event = threading.Event()
@@ -118,8 +124,20 @@ class AuthorizationServer:
             while not self.authorization_attempted_event.is_set():
                 server.handle_request()
 
-    def set_authorization_code(self, code):
+    def set_authorization_code(self, code) -> str:
+        """
+        Sets the authorization code and returns a key that can be used to authenticate from the CLI
+        """
         self.authorization_code = code
+
+        key_dict = {"authorization_code": code, "code_verifier": self.code_verifier}
+
+        key_json = json.dumps(key_dict)
+
+        return (
+            base64.urlsafe_b64encode(key_json.encode()).decode("utf-8"),
+            self.remote,
+        )
 
 
 class SpotifyRedirectRequestHandler(BaseHTTPRequestHandler):
@@ -140,12 +158,12 @@ class SpotifyRedirectRequestHandler(BaseHTTPRequestHandler):
 
         super().__init__(*args, **kwargs)
 
-    def _handle_success(self):
+    def _handle_success(self, key, remote):
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
 
-        self.wfile.write(get_authorized_page())
+        self.wfile.write(get_authorized_page(key=key, remote=remote))
 
     def _handle_error(self, error):
         self.send_response(400)
@@ -162,8 +180,8 @@ class SpotifyRedirectRequestHandler(BaseHTTPRequestHandler):
             self.authorization_attempted_event.set()
             if "code" in query and "state" in query:
                 if query["state"][0] == self.state:
-                    self._handle_success()
-                    self.set_authorization_code(query["code"][0])
+                    key, remote = self.set_authorization_code(query["code"][0])
+                    self._handle_success(key=key, remote=remote)
                 else:
                     self._handle_error(self.STATE_MISMATCH)
             elif "error" in query and "state" in query:
@@ -206,7 +224,9 @@ def authenticate() -> AccessToken:
 
     state = generate_state(remote=False)
 
-    auth_server = AuthorizationServer(state=state)
+    auth_server = AuthorizationServer(
+        state=state, code_verifier=code_verifier, remote=False
+    )
 
     auth_server.wait_for_start()
 
@@ -232,4 +252,32 @@ def authenticate() -> AccessToken:
 
 
 def authenticate_for_remote():
-    pass
+    code_verifier, code_challenge = generate_code()
+
+    state = generate_state(remote=True)
+
+    auth_server = AuthorizationServer(
+        state=state, code_verifier=code_verifier, remote=True
+    )
+
+    auth_server.wait_for_start()
+
+    url = generate_spotify_authorize_url(code_challenge=code_challenge, state=state)
+
+    print(f"Please visit {url} in a browser where you are logged in to Spotify.")
+
+    webbrowser.open(url=url)
+
+    auth_server.wait_for_stop()
+
+
+def authenticate_with_key(key: str) -> AccessToken:
+    unhashed = base64.urlsafe_b64decode(key)
+    authorization_json = json.loads(unhashed)
+
+    access_token = get_access_token(
+        authorization_code=authorization_json["authorization_code"],
+        code_verifier=authorization_json["code_verifier"],
+    )
+
+    return access_token
